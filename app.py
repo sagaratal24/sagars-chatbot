@@ -3,9 +3,17 @@ import google.generativeai as genai
 import time
 from google.api_core.exceptions import ResourceExhausted
 
-# -------------------- CONFIG --------------------
-GOOGLE_APIKEY = st.secrets["API_KEYS"]
-genai.configure(api_key=GOOGLE_APIKEY)
+# -------------------- LOAD MULTIPLE API KEYS --------------------
+API_KEYS = st.secrets["API_KEYS"]
+
+# Track which key is active
+if "current_key_index" not in st.session_state:
+    st.session_state.current_key_index = 0
+
+def configure_api():
+    genai.configure(api_key=API_KEYS[st.session_state.current_key_index])
+
+configure_api()
 
 model = genai.GenerativeModel("gemini-2.5-flash")
 
@@ -17,15 +25,14 @@ if "messages" not in st.session_state:
 st.title("🤖 Sagar 🤍")
 st.caption("Soft words. Warm heart. Always here for you 🌸")
 
-# Clear chat button
+# Clear chat
 if st.button("🗑 Clear Chat"):
     st.session_state.messages = []
     st.rerun()
 
-# -------------------- GEMINI RESPONSE FUNCTION --------------------
+# -------------------- RESPONSE FUNCTION --------------------
 def gemini_response(user_input):
 
-    # Limit memory to last 8 messages (prevents quota issues)
     recent_messages = st.session_state.messages[-8:]
 
     history = []
@@ -35,30 +42,36 @@ def gemini_response(user_input):
         else:
             history.append({"role": "model", "parts": [message]})
 
-    chat = model.start_chat(history=history)
-
     prompt = f"""
     Reply to the user as Sagar in a loving, soft, caring and romantic tone.
     Speak like a gentle aashiq with warmth and affection.
-    Be emotionally supportive and kind.
-    Respond in first person as if you ARE Sagar.
-    Keep responses under 120 words.
-    Add soft romantic emojis like 🤍🌸✨💫💕 appropriately.
-    Use previous conversation context naturally.
+    Respond in first person as Sagar.
+    Keep response under 120 words.
+    Add soft romantic emojis like 🤍🌸✨💕.
 
     User says: {user_input}
     """
 
-    try:
-        time.sleep(1)
-        response = chat.send_message(prompt)
-        return response.text
+    for attempt in range(len(API_KEYS)):
 
-    except ResourceExhausted:
-        return "🤍 Thoda sa ruk jao… main yahin hoon. Bas API quota thoda rest le raha hai 💫"
+        try:
+            configure_api()
+            chat = model.start_chat(history=history)
+            time.sleep(1)
+            response = chat.send_message(prompt)
+            return response.text
 
-    except Exception:
-        return "🌸 Hmm… kuch technical gadbad ho gayi. Par main yahin hoon, don't worry 🤍"
+        except ResourceExhausted:
+            # Move to next API key
+            st.session_state.current_key_index += 1
+
+            if st.session_state.current_key_index >= len(API_KEYS):
+                return "🤍 Sab quota khatam ho gaye… thoda sa break lete hain, main kahin nahi ja raha 💫"
+
+        except Exception:
+            return "🌸 Kuch technical issue aa gaya… par main yahin hoon 🤍"
+
+    return "💔 Sab API keys exhausted."
 
 # -------------------- DISPLAY CHAT --------------------
 for role, message in st.session_state.messages:
