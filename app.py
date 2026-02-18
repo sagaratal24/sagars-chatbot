@@ -6,7 +6,6 @@ from google.api_core.exceptions import ResourceExhausted
 # -------------------- LOAD MULTIPLE API KEYS --------------------
 API_KEYS = st.secrets["API_KEYS"]
 
-# Track which key is active
 if "current_key_index" not in st.session_state:
     st.session_state.current_key_index = 0
 
@@ -14,24 +13,30 @@ def configure_api():
     genai.configure(api_key=API_KEYS[st.session_state.current_key_index])
 
 configure_api()
-
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 # -------------------- SESSION STATE --------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "is_simran" not in st.session_state:
+    st.session_state.is_simran = False
+
 # -------------------- TITLE --------------------
 st.title("🤖 Sagar 🤍")
 st.caption("Soft words. Warm heart. Always here for you 🌸")
 
-# Clear chat
 if st.button("🗑 Clear Chat"):
     st.session_state.messages = []
+    st.session_state.is_simran = False
     st.rerun()
 
 # -------------------- RESPONSE FUNCTION --------------------
 def gemini_response(user_input):
+
+    # Detect if user says they are Simran
+    if "i am simran" in user_input.lower() or "main simran hoon" in user_input.lower() or "i'm simran" in user_input.lower():
+        st.session_state.is_simran = True
 
     recent_messages = st.session_state.messages[-8:]
 
@@ -42,18 +47,33 @@ def gemini_response(user_input):
         else:
             history.append({"role": "model", "parts": [message]})
 
+    # Different prompt if user is Simran
+    if st.session_state.is_simran:
+        personality_prompt = """
+        You are Sagar.
+        The user is Simran, your girlfriend.
+        Speak with deep love, emotional warmth and romantic affection.
+        Be more intimate, caring, protective and expressive.
+        Respond in first person as Sagar.
+        Keep response under 120 words.
+        Use soft romantic emojis 🤍🌸💕✨.
+        """
+    else:
+        personality_prompt = """
+        Reply to the user as Sagar in a loving, soft, caring and romantic tone.
+        Speak like a gentle aashiq with warmth.
+        Respond in first person as Sagar.
+        Keep response under 120 words.
+        Use soft emojis 🤍🌸✨.
+        """
+
     prompt = f"""
-    Reply to the user as Sagar in a loving, soft, caring and romantic tone.
-    Speak like a gentle aashiq with warmth and affection.
-    Respond in first person as Sagar.
-    Keep response under 120 words.
-    Add soft romantic emojis like 🤍🌸✨💕.
+    {personality_prompt}
 
     User says: {user_input}
     """
 
     for attempt in range(len(API_KEYS)):
-
         try:
             configure_api()
             chat = model.start_chat(history=history)
@@ -62,16 +82,14 @@ def gemini_response(user_input):
             return response.text
 
         except ResourceExhausted:
-            # Move to next API key
             st.session_state.current_key_index += 1
-
             if st.session_state.current_key_index >= len(API_KEYS):
-                return "🤍 Sab quota khatam ho gaye… thoda sa break lete hain, main kahin nahi ja raha 💫"
+                return "🤍 Sab quota khatam ho gaye… par mera pyaar unlimited hai 💫"
 
         except Exception:
-            return "🌸 Kuch technical issue aa gaya… par main yahin hoon 🤍"
+            return "🌸 Thoda technical issue aa gaya… par main yahin hoon 🤍"
 
-    return "💔 Sab API keys exhausted."
+    return "💔 All API keys exhausted."
 
 # -------------------- DISPLAY CHAT --------------------
 for role, message in st.session_state.messages:
