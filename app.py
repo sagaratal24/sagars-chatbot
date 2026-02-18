@@ -14,8 +14,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # -------------------- TITLE --------------------
-st.title("🤖 Sagar's Bot 🤝")
-st.caption("Sagar here 😎🔥 Convo? Crushed it.")
+st.title("🤖 Sagar 🤍")
+st.caption("Soft words. Warm heart. Always here for you 🌸")
 
 # Clear chat button
 if st.button("🗑 Clear Chat"):
@@ -25,7 +25,7 @@ if st.button("🗑 Clear Chat"):
 # -------------------- GEMINI RESPONSE FUNCTION --------------------
 def gemini_response(user_input):
 
-    # Limit memory to last 8 messages (prevents quota exhaustion)
+    # Limit memory to last 8 messages (prevents quota issues)
     recent_messages = st.session_state.messages[-8:]
 
     history = []
@@ -38,24 +38,27 @@ def gemini_response(user_input):
     chat = model.start_chat(history=history)
 
     prompt = f"""
-    Reply to the user as Sagar in a funny, humorous, confident and friendly tone.
-    Respond like you ARE Sagar (first person).
-    Add emojis to make the response more fun.
-    Keep response under 120 words.
+    Reply to the user as Sagar in a loving, soft, caring and romantic tone.
+    Speak like a gentle aashiq with warmth and affection.
+    Be emotionally supportive and kind.
+    Respond in first person as if you ARE Sagar.
+    Keep responses under 120 words.
+    Add soft romantic emojis like 🤍🌸✨💫💕 appropriately.
+    Use previous conversation context naturally.
 
     User says: {user_input}
     """
 
     try:
-        time.sleep(1)  # small delay to reduce rate limit issues
+        time.sleep(1)
         response = chat.send_message(prompt)
         return response.text
 
     except ResourceExhausted:
-        return "⚠️ Arre bhai 😭 API quota khatam ho gaya. Thoda break lete hain!"
+        return "🤍 Thoda sa ruk jao… main yahin hoon. Bas API quota thoda rest le raha hai 💫"
 
     except Exception:
-        return "⚠️ Something went wrong. Even Sagar needs chai ☕"
+        return "🌸 Hmm… kuch technical gadbad ho gayi. Par main yahin hoon, don't worry 🤍"
 
 # -------------------- DISPLAY CHAT --------------------
 for role, message in st.session_state.messages:
