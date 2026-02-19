@@ -19,6 +19,48 @@ if "messages" not in st.session_state:
 if "is_simran" not in st.session_state:
     st.session_state.is_simran = False
 
+
+# -------------------- TYPING INDICATOR CSS --------------------
+st.markdown("""
+<style>
+.typing-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    background-color: #dcf8c6;
+    border-radius: 15px;
+    width: fit-content;
+}
+
+.dot {
+    height: 8px;
+    width: 8px;
+    background-color: #555;
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.4s infinite;
+}
+
+.dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 # -------------------- UI --------------------
 st.title("🤖 Sagar 🤍")
 st.caption("Soft words. Warm heart. Always here for you 🌸")
@@ -28,6 +70,7 @@ if st.button("🗑 Clear Chat"):
     st.session_state.is_simran = False
     st.session_state.current_key_index = 0
     st.rerun()
+
 
 # -------------------- RESPONSE FUNCTION --------------------
 def gemini_response_stream(user_input, placeholder):
@@ -67,25 +110,32 @@ def gemini_response_stream(user_input, placeholder):
 
     prompt = f"{personality_prompt}\n\nUser says: {user_input}"
 
+    # -------------------- SHOW TYPING INDICATOR --------------------
+    placeholder.markdown("""
+    <div class="typing-container">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+    </div>
+    """, unsafe_allow_html=True)
+
     # -------------------- TRY EACH API KEY --------------------
     for attempt in range(len(API_KEYS)):
 
         try:
-            # Keep index safe
             st.session_state.current_key_index %= len(API_KEYS)
-
             current_key = API_KEYS[st.session_state.current_key_index]
 
-            # Configure with current key
             genai.configure(api_key=current_key)
-
-            # 🔥 IMPORTANT: recreate model after configure
             model = genai.GenerativeModel("gemini-2.5-flash")
 
             chat = model.start_chat(history=history)
             response = chat.send_message(prompt, stream=True)
 
             full_text = ""
+
+            # Clear typing indicator before streaming
+            placeholder.empty()
 
             for chunk in response:
                 if chunk.text:
@@ -96,7 +146,6 @@ def gemini_response_stream(user_input, placeholder):
             return full_text
 
         except ResourceExhausted:
-            # Move to next key
             st.session_state.current_key_index += 1
             continue
 
@@ -104,14 +153,15 @@ def gemini_response_stream(user_input, placeholder):
             placeholder.markdown("🌸 Thoda technical issue aa gaya… par main yahin hoon 🤍")
             return "Error"
 
-    # If all keys exhausted
     placeholder.markdown("🤍 Sab quota khatam ho gaye… par mera pyaar unlimited hai 💫")
     return "Quota Exhausted"
+
 
 # -------------------- DISPLAY CHAT --------------------
 for role, message in st.session_state.messages:
     with st.chat_message("user" if role == "User" else "assistant"):
         st.markdown(message)
+
 
 # -------------------- USER INPUT --------------------
 if user_input := st.chat_input("Type your message..."):
