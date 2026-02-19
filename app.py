@@ -22,65 +22,82 @@ if "messages" not in st.session_state:
 if "is_simran" not in st.session_state:
     st.session_state.is_simran = False
 
+
 # -------------------- UI STYLE FUNCTION --------------------
 def apply_ui():
 
     if st.session_state.is_simran:
-        # 💖 Romantic Pink Mode with Animation
+        # 💖 Romantic Animated Mode
         st.markdown("""
         <style>
-        body {
+
+        /* Main Background */
+        [data-testid="stAppViewContainer"] {
             background: linear-gradient(-45deg, #ffd6e8, #ffe6f2, #ffcce0, #ffe6f2);
             background-size: 400% 400%;
-            animation: gradientBG 8s ease infinite;
+            animation: romanticBG 10s ease infinite;
         }
 
-        @keyframes gradientBG {
+        @keyframes romanticBG {
             0% {background-position: 0% 50%;}
             50% {background-position: 100% 50%;}
             100% {background-position: 0% 50%;}
         }
 
-        .stChatMessage {
-            border-radius: 15px;
-            padding: 10px;
+        /* Chat bubble common */
+        [data-testid="stChatMessage"] {
+            border-radius: 18px;
+            padding: 12px;
+            margin-bottom: 8px;
         }
 
-        .stChatMessage[data-testid="assistant"] {
-            background-color: #ffb6d9;
+        /* Assistant bubble */
+        [data-testid="stChatMessage"]:has(div[data-testid="assistant-avatar"]) {
+            background-color: #ffb6d9 !important;
         }
 
-        .stChatMessage[data-testid="user"] {
-            background-color: #ffffff;
+        /* User bubble */
+        [data-testid="stChatMessage"]:has(div[data-testid="user-avatar"]) {
+            background-color: #ffffff !important;
         }
+
         </style>
         """, unsafe_allow_html=True)
 
     else:
-        # 📱 WhatsApp Style UI
+        # 📱 WhatsApp Style Mode
         st.markdown("""
         <style>
-        body {
+
+        /* WhatsApp Background */
+        [data-testid="stAppViewContainer"] {
             background-color: #ece5dd;
         }
 
-        .stChatMessage {
-            border-radius: 15px;
-            padding: 10px;
+        /* Chat bubble common */
+        [data-testid="stChatMessage"] {
+            border-radius: 18px;
+            padding: 12px;
+            margin-bottom: 8px;
         }
 
-        .stChatMessage[data-testid="assistant"] {
-            background-color: #dcf8c6;
+        /* Assistant bubble (green) */
+        [data-testid="stChatMessage"]:has(div[data-testid="assistant-avatar"]) {
+            background-color: #dcf8c6 !important;
         }
 
-        .stChatMessage[data-testid="user"] {
-            background-color: #ffffff;
+        /* User bubble */
+        [data-testid="stChatMessage"]:has(div[data-testid="user-avatar"]) {
+            background-color: #ffffff !important;
         }
+
         </style>
         """, unsafe_allow_html=True)
 
-# Apply UI
+
+# Apply UI immediately
 apply_ui()
+
 
 # -------------------- HEADER --------------------
 st.title("🤖 Sagar 🤍")
@@ -92,6 +109,7 @@ if st.button("🗑 Clear Chat"):
     st.session_state.current_key_index = 0
     st.rerun()
 
+
 # -------------------- RESPONSE FUNCTION --------------------
 def gemini_response_stream(user_input, placeholder):
 
@@ -99,7 +117,7 @@ def gemini_response_stream(user_input, placeholder):
     simran_triggers = ["i am simran", "i'm simran", "main simran hoon"]
     if any(trigger in user_input.lower() for trigger in simran_triggers):
         st.session_state.is_simran = True
-        st.rerun()  # 🔥 instantly switch UI
+        st.rerun()
 
     # Limit history
     recent_messages = st.session_state.messages[-8:]
@@ -118,21 +136,22 @@ def gemini_response_stream(user_input, placeholder):
         The user is Simran, your girlfriend.
         Speak with deep love and emotional warmth.
         Respond in first person.
-        Keep response under 75 words.
+        Keep response under 80 words.
         Use soft romantic emojis 🤍🌸💕✨.
         """
     else:
         personality_prompt = """
         Reply as Sagar in a loving, soft, caring tone.
         Respond in first person.
-        Keep response under 75 words.
+        Keep response under 80 words.
         Use soft emojis 🤍🌸✨.
         """
 
     prompt = f"{personality_prompt}\n\nUser says: {user_input}"
 
-    # -------------------- TRY EACH API KEY --------------------
+    # Try API Keys
     for attempt in range(len(API_KEYS)):
+
         try:
             st.session_state.current_key_index %= len(API_KEYS)
             current_key = API_KEYS[st.session_state.current_key_index]
@@ -163,10 +182,12 @@ def gemini_response_stream(user_input, placeholder):
     placeholder.markdown("🤍 Sab quota khatam ho gaye… par mera pyaar unlimited hai 💫")
     return "Quota Exhausted"
 
+
 # -------------------- DISPLAY CHAT --------------------
 for role, message in st.session_state.messages:
     with st.chat_message("user" if role == "User" else "assistant"):
         st.markdown(message)
+
 
 # -------------------- USER INPUT --------------------
 if user_input := st.chat_input("Type your message..."):
