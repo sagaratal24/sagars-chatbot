@@ -68,7 +68,7 @@ def gemini_response_stream(user_input, placeholder):
         Speak with deep love, emotional warmth and romantic affection.
         Be caring and expressive.
         Respond in first person.
-        Keep response under 120 words.
+        Keep response under 80 words.
         Use soft romantic emojis 🤍🌸💕✨.
         """
     else:
@@ -76,7 +76,7 @@ def gemini_response_stream(user_input, placeholder):
         Reply as Sagar in a loving, soft, caring and romantic tone.
         Speak like a gentle aashiq.
         Respond in first person.
-        Keep response under 120 words.
+        Keep response under 80 words.
         Use soft emojis 🤍🌸✨.
         """
 
