@@ -2,14 +2,14 @@ import streamlit as st
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted
 
-# -------------------- LOAD MULTIPLE API KEYS --------------------
+# -------------------- LOAD API KEYS --------------------
 API_KEYS = st.secrets["API_KEYS"]
 
 if not isinstance(API_KEYS, list) or len(API_KEYS) == 0:
     st.error("API_KEYS must be a non-empty list in Streamlit secrets.")
     st.stop()
 
-# -------------------- SESSION STATE INIT --------------------
+# -------------------- SESSION STATE --------------------
 if "current_key_index" not in st.session_state:
     st.session_state.current_key_index = 0
 
@@ -18,19 +18,6 @@ if "messages" not in st.session_state:
 
 if "is_simran" not in st.session_state:
     st.session_state.is_simran = False
-
-# -------------------- CONFIGURE API SAFELY --------------------
-def configure_api():
-    # Always keep index inside valid range
-    st.session_state.current_key_index %= len(API_KEYS)
-
-    genai.configure(
-        api_key=API_KEYS[st.session_state.current_key_index]
-    )
-
-# -------------------- MODEL --------------------
-configure_api()
-model = genai.GenerativeModel("gemini-2.5-flash")
 
 # -------------------- UI --------------------
 st.title("🤖 Sagar 🤍")
@@ -50,7 +37,7 @@ def gemini_response_stream(user_input, placeholder):
     if any(trigger in user_input.lower() for trigger in simran_triggers):
         st.session_state.is_simran = True
 
-    # Limit history (last 8 messages)
+    # Limit history
     recent_messages = st.session_state.messages[-8:]
     history = []
 
@@ -60,37 +47,41 @@ def gemini_response_stream(user_input, placeholder):
         else:
             history.append({"role": "model", "parts": [message]})
 
-    # Personality prompt
+    # Personality
     if st.session_state.is_simran:
         personality_prompt = """
         You are Sagar.
         The user is Simran, your girlfriend.
-        Speak with deep love, emotional warmth and romantic affection.
-        Be caring and expressive.
+        Speak with deep love and emotional warmth.
         Respond in first person.
         Keep response under 80 words.
         Use soft romantic emojis 🤍🌸💕✨.
         """
     else:
         personality_prompt = """
-        Reply as Sagar in a loving, soft, caring and romantic tone.
-        Speak like a gentle aashiq.
+        Reply as Sagar in a loving, soft, caring tone.
         Respond in first person.
         Keep response under 80 words.
         Use soft emojis 🤍🌸✨.
         """
 
-    prompt = f"""
-    {personality_prompt}
+    prompt = f"{personality_prompt}\n\nUser says: {user_input}"
 
-    User says: {user_input}
-    """
-
-    # Try each API key once
+    # -------------------- TRY EACH API KEY --------------------
     for attempt in range(len(API_KEYS)):
 
         try:
-            configure_api()
+            # Keep index safe
+            st.session_state.current_key_index %= len(API_KEYS)
+
+            current_key = API_KEYS[st.session_state.current_key_index]
+
+            # Configure with current key
+            genai.configure(api_key=current_key)
+
+            # 🔥 IMPORTANT: recreate model after configure
+            model = genai.GenerativeModel("gemini-2.5-flash")
+
             chat = model.start_chat(history=history)
             response = chat.send_message(prompt, stream=True)
 
@@ -99,13 +90,13 @@ def gemini_response_stream(user_input, placeholder):
             for chunk in response:
                 if chunk.text:
                     full_text += chunk.text
-                    placeholder.markdown(full_text + "▌")
+                    placeholder.markdown(full_text + "😘")
 
             placeholder.markdown(full_text)
             return full_text
 
         except ResourceExhausted:
-            # Rotate to next key safely
+            # Move to next key
             st.session_state.current_key_index += 1
             continue
 
@@ -117,7 +108,7 @@ def gemini_response_stream(user_input, placeholder):
     placeholder.markdown("🤍 Sab quota khatam ho gaye… par mera pyaar unlimited hai 💫")
     return "Quota Exhausted"
 
-# -------------------- DISPLAY OLD CHAT --------------------
+# -------------------- DISPLAY CHAT --------------------
 for role, message in st.session_state.messages:
     with st.chat_message("user" if role == "User" else "assistant"):
         st.markdown(message)
