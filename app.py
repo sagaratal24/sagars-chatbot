@@ -22,22 +22,25 @@ if "messages" not in st.session_state:
 if "is_simran" not in st.session_state:
     st.session_state.is_simran = False
 
-# -------------------- TITLE --------------------
+# -------------------- UI --------------------
 st.title("🤖 Sagar 🤍")
 st.caption("Soft words. Warm heart. Always here for you 🌸")
 
 if st.button("🗑 Clear Chat"):
     st.session_state.messages = []
     st.session_state.is_simran = False
+    st.session_state.current_key_index = 0
     st.rerun()
 
-# -------------------- RESPONSE FUNCTION --------------------
-def gemini_response(user_input):
+# -------------------- RESPONSE FUNCTION (STREAMING) --------------------
+def gemini_response_stream(user_input, placeholder):
 
-    # Detect if user says they are Simran
-    if "i am simran" in user_input.lower() or "main simran hoon" in user_input.lower() or "i'm simran" in user_input.lower():
+    # Detect Simran
+    simran_triggers = ["i am simran", "i'm simran", "main simran hoon"]
+    if any(trigger in user_input.lower() for trigger in simran_triggers):
         st.session_state.is_simran = True
 
+    # Limit history (last 8 messages)
     recent_messages = st.session_state.messages[-8:]
 
     history = []
@@ -47,22 +50,22 @@ def gemini_response(user_input):
         else:
             history.append({"role": "model", "parts": [message]})
 
-    # Different prompt if user is Simran
+    # Personality prompt
     if st.session_state.is_simran:
         personality_prompt = """
         You are Sagar.
         The user is Simran, your girlfriend.
         Speak with deep love, emotional warmth and romantic affection.
-        Be more intimate, caring, protective and expressive.
-        Respond in first person as Sagar.
+        Be caring and expressive.
+        Respond in first person.
         Keep response under 120 words.
         Use soft romantic emojis 🤍🌸💕✨.
         """
     else:
         personality_prompt = """
-        Reply to the user as Sagar in a loving, soft, caring and romantic tone.
-        Speak like a gentle aashiq with warmth.
-        Respond in first person as Sagar.
+        Reply as Sagar in a loving, soft, caring and romantic tone.
+        Speak like a gentle aashiq.
+        Respond in first person.
         Keep response under 120 words.
         Use soft emojis 🤍🌸✨.
         """
@@ -73,25 +76,38 @@ def gemini_response(user_input):
     User says: {user_input}
     """
 
+    # Rotate API keys if needed
     for attempt in range(len(API_KEYS)):
         try:
             configure_api()
             chat = model.start_chat(history=history)
-            time.sleep(1)
-            response = chat.send_message(prompt)
-            return response.text
+
+            response = chat.send_message(prompt, stream=True)
+
+            full_text = ""
+
+            for chunk in response:
+                if chunk.text:
+                    full_text += chunk.text
+                    placeholder.markdown(full_text + "▌")  # blinking cursor effect
+
+            placeholder.markdown(full_text)
+            return full_text
 
         except ResourceExhausted:
             st.session_state.current_key_index += 1
             if st.session_state.current_key_index >= len(API_KEYS):
-                return "🤍 Sab quota khatam ho gaye… par mera pyaar unlimited hai 💫"
+                placeholder.markdown("🤍 Sab quota khatam ho gaye… par mera pyaar unlimited hai 💫")
+                return "Quota Exhausted"
 
         except Exception:
-            return "🌸 Thoda technical issue aa gaya… par main yahin hoon 🤍"
+            placeholder.markdown("🌸 Thoda technical issue aa gaya… par main yahin hoon 🤍")
+            return "Error"
 
-    return "💔 All API keys exhausted."
+    placeholder.markdown("💔 All API keys exhausted.")
+    return "Error"
 
-# -------------------- DISPLAY CHAT --------------------
+# -------------------- DISPLAY OLD CHAT --------------------
 for role, message in st.session_state.messages:
     with st.chat_message("user" if role == "User" else "assistant"):
         st.markdown(message)
@@ -103,8 +119,8 @@ if user_input := st.chat_input("Type your message..."):
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    reply = gemini_response(user_input)
+    with st.chat_message("assistant"):
+        placeholder = st.empty()
+        reply = gemini_response_stream(user_input, placeholder)
 
     st.session_state.messages.append(("Sagar", reply))
-    with st.chat_message("assistant"):
-        st.markdown(reply)
